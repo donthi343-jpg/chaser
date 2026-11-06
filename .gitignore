@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chaser</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --ink: #14213d;
+        --muted: #667085;
+        --line: #dfe3ea;
+        --primary: #0b6e6e;
+        --primary-2: #294b9b;
+        --danger: #b42318;
+        --success: #067647;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .hidden { display: none !important; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 22px;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, 0.04);
+      }
+      .login-box {
+        max-width: 480px;
+        margin: 80px auto 0;
+      }
+      h1, h2, h3 { margin-top: 0; }
+      form { display: grid; gap: 12px; }
+      .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      input, textarea, select, button {
+        font: inherit;
+      }
+      input, textarea, select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #fff;
+      }
+      textarea { min-height: 90px; resize: vertical; }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .primary { background: var(--primary); color: white; }
+      .secondary { background: #eef3ff; color: var(--primary-2); }
+      .danger { background: #fee4e2; color: var(--danger); }
+      .muted { color: var(--muted); }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+      }
+      .invoice-list {
+        display: grid;
+        gap: 12px;
+      }
+      .invoice-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .invoice-item.active {
+        border-color: var(--primary);
+        background: rgba(11, 110, 110, 0.04);
+      }
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 4px 9px;
+        font-size: 12px;
+        font-weight: 700;
+        background: #ecfdf3;
+        color: var(--success);
+      }
+      .pill.overdue { background: #fff1e6; color: #b42318; }
+      .pill.draft { background: #eceff3; color: #475467; }
+      .code {
+        background: #f7f7fa;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        word-break: break-all;
+        font-size: 13px;
+      }
+      .error { color: var(--danger); font-size: 14px; }
+      .success { color: var(--success); font-size: 14px; }
+      @media (max-width: 900px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 620px) {
+        .row { grid-template-columns: 1fr; }
+        .topbar { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="authView" class="panel login-box">
+        <h1>Chaser</h1>
+        <p class="muted">Invoices Claude writes. Chaser chases.</p>
+
+        <form id="loginForm">
+          <label>
+            Username
+            <input name="username" type="text" value="demo" required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" value="demo1234" required />
+          </label>
+          <button class="primary" type="submit">Sign in</button>
+          <div id="loginError" class="error"></div>
+        </form>
+
+        <hr />
+
+        <h3>Create account</h3>
+        <form id="signupForm">
+          <label>
+            Username
+            <input name="username" type="text" placeholder="yourname" required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" placeholder="at least 6 chars" required />
+          </label>
+          <button class="secondary" type="submit">Create account</button>
+          <div id="signupError" class="error"></div>
+        </form>
+      </div>
+
+      <div id="appView" class="hidden">
+        <div class="topbar">
+          <div>
+            <h1>Chaser</h1>
+            <div id="userName" class="muted"></div>
+          </div>
+          <button id="logoutBtn" class="danger" type="button">Log out</button>
+        </div>
+
+        <div class="grid">
+          <div class="panel">
+            <h2>Invoices</h2>
+            <div class="invoice-list" id="invoiceList"></div>
+          </div>
+
+          <div class="panel">
+            <h2>Business profile</h2>
+            <form id="profileForm">
+              <label>
+                Business name
+                <input name="business_name" />
+              </label>
+              <label>
+                Business email
+                <input name="email" type="email" />
+              </label>
+              <label>
+                Address
+                <textarea name="address"></textarea>
+              </label>
+              <label>
+                Payment info
+                <textarea name="payment_info"></textarea>
+              </label>
+              <label>
+                Auto reminders
+                <select name="auto_reminders">
+                  <option value="true">On</option>
+                  <option value="false">Off</option>
+                </select>
+              </label>
+              <button type="submit" class="primary">Save profile</button>
+            </form>
+
+            <div style="margin-top:20px;">
+              <h3>Connect Claude</h3>
+              <div id="mcpUrl" class="code"></div>
+              <div style="margin-top:12px; display: flex; gap:10px; flex-wrap: wrap;">
+                <button id="regenTokenBtn" class="secondary" type="button">Generate new link</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+          <h2 id="invoiceTitle">Create invoice</h2>
+          <form id="invoiceForm">
+            <div class="row">
+              <label>
+                Client name
+                <input name="client_name" />
+              </label>
+              <label>
+                Client email
+                <input name="client_email" type="email" />
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Issue date
+                <input name="issue_date" type="date" />
+              </label>
+              <label>
+                Due date
+                <input name="due_date" type="date" />
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Currency
+                <select name="currency">
+                  <option value="INR">INR</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </label>
+              <label>
+                Tax rate %
+                <input name="tax_rate" type="number" step="0.01" value="18" />
+              </label>
+            </div>
+            <label>
+              Notes
+              <textarea name="notes"></textarea>
+            </label>
+
+            <h3>Line items</h3>
+            <div id="itemsContainer"></div>
+            <button type="button" class="secondary" id="addItemBtn">Add item</button>
+
+            <div class="row" style="margin-top:8px;">
+              <button type="submit" class="primary">Save invoice</button>
+              <button type="button" class="secondary" id="newInvoiceBtn">New invoice</button>
+            </div>
+            <div id="invoiceMessage" class="success"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const authView = document.getElementById('authView');
+      const appView = document.getElementById('appView');
+      const invoiceList = document.getElementById('invoiceList');
+      const invoiceForm = document.getElementById('invoiceForm');
+      const profileForm = document.getElementById('profileForm');
+      const itemsContainer = document.getElementById('itemsContainer');
+      const userName = document.getElementById('userName');
+      const mcpUrlEl = document.getElementById('mcpUrl');
+      const invoiceTitle = document.getElementById('invoiceTitle');
+      const state = { user: null, invoices: [], currentInvoice: null };
+
+      async function api(path, options = {}) {
+        const res = await fetch(path, {
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+          ...options
+        });
+        const text = await res.text();
+        let data = {};
+        try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { error: text || 'Request failed' }; }
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+      }
+
+      function setMessage(id, text, type='success') {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text || '';
+        el.className = type === 'error' ? 'error' : 'success';
+      }
+
+      function renderItemRow(item = { description: '', quantity: 1, unit_price: 0 }) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <label>
+            Description
+            <input name="description" value="${item.description || ''}" placeholder="Website design" />
+          </label>
+          <label>
+            Qty
+            <input name="quantity" type="number" min="0.01" step="0.01" value="${item.quantity || 1}" />
+          </label>
+          <label>
+            Unit price
+            <input name="unit_price" type="number" min="0" step="0.01" value="${item.unit_price || 0}" />
+          </label>
+          <button type="button" class="danger removeItemBtn">Remove</button>
+        `;
+        row.querySelector('.removeItemBtn').addEventListener('click', () => row.remove());
+        return row;
+      }
+
+      function getInvoiceItems() {
+        const rows = [...itemsContainer.querySelectorAll('.row')];
+        return rows.map((row) => {
+          const description = row.querySelector('[name="description"]').value.trim();
+          const quantity = Number(row.querySelector('[name="quantity"]').value || 0);
+          const unit_price = Number(row.querySelector('[name="unit_price"]').value || 0);
+          return { description, quantity, unit_price };
+        }).filter((item) => item.description && item.quantity > 0 && item.unit_price >= 0);
+      }
+
+      function fillInvoiceForm(inv) {
+        state.currentInvoice = inv;
+        invoiceTitle.textContent = inv ? `Edit invoice ${inv.number}` : 'Create invoice';
+        invoiceForm.elements.client_name.value = inv?.client_name || '';
+        invoiceForm.elements.client_email.value = inv?.client_email || '';
+        invoiceForm.elements.issue_date.value = inv?.issue_date || '';
+        invoiceForm.elements.due_date.value = inv?.due_date || '';
+        invoiceForm.elements.currency.value = inv?.currency || 'INR';
+        invoiceForm.elements.tax_rate.value = inv?.tax_rate ?? 18;
+        invoiceForm.elements.notes.value = inv?.notes || '';
+        itemsContainer.innerHTML = '';
+        const items = inv?.items && inv.items.length ? inv.items : [{ description: '', quantity: 1, unit_price: 0 }];
+        items.forEach((item) => itemsContainer.appendChild(renderItemRow(item)));
+      }
+
+      function renderInvoices() {
+        invoiceList.innerHTML = '';
+        const list = [...state.invoices].sort((a, b) => b.created.localeCompare(a.created));
+        for (const inv of list) {
+          const item = document.createElement('div');
+          item.className = `invoice-item ${state.currentInvoice && state.currentInvoice.id === inv.id ? 'active' : ''}`;
+          const status = inv.status_effective || inv.status || 'draft';
+          const title = document.createElement('div');
+          title.innerHTML = `<strong>${inv.number}</strong><br><span class="muted">${inv.client_name || 'Unnamed client'}</span>`;
+          const right = document.createElement('div');
+          right.style.textAlign = 'right';
+          right.innerHTML = `
+            <div><strong>${new Intl.NumberFormat('en-IN', { style: 'currency', currency: inv.currency || 'INR' }).format(inv.totals?.total || 0)}</strong></div>
+            <div class="pill ${status === 'overdue' ? 'overdue' : status === 'draft' ? 'draft' : ''}">${status}</div>
+          `;
+          item.append(title, right);
+          item.addEventListener('click', () => {
+            state.currentInvoice = inv;
+            fillInvoiceForm(inv);
+            renderInvoices();
+          });
+          invoiceList.appendChild(item);
+        }
+      }
+
+      async function loadMe() {
+        const me = await api('/api/me');
+        state.user = me;
+        document.getElementById('userName').textContent = `Signed in as ${me.username}`;
+        profileForm.elements.business_name.value = me.profile.business_name || '';
+        profileForm.elements.address.value = me.profile.address || '';
+        profileForm.elements.email.value = me.profile.email || '';
+        profileForm.elements.payment_info.value = me.profile.payment_info || '';
+        profileForm.elements.auto_reminders.value = String(me.profile.auto_reminders !== false);
+        mcpUrlEl.textContent = me.mcp_url || '';
+      }
+
+      async function loadInvoices() {
+        const list = await api('/api/invoices');
+        state.invoices = list;
+        if (!state.currentInvoice && list.length) {
+          state.currentInvoice = list[0];
+          fillInvoiceForm(list[0]);
+        } else if (!state.currentInvoice) {
+          fillInvoiceForm(null);
+        }
+        renderInvoices();
+      }
+
+      async function initApp() {
+        authView.classList.add('hidden');
+        appView.classList.remove('hidden');
+        await loadMe();
+        await loadInvoices();
+      }
+
+      async function login(username, password) {
+        const res = await api('/api/login', {
+          method: 'POST',
+          body: JSON.stringify({ username, password })
+        });
+        state.user = res;
+        await initApp();
+      }
+
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMessage('loginError', '', 'error');
+        const form = new FormData(e.target);
+        try {
+          await login(form.get('username').toString().trim(), form.get('password').toString());
+        } catch (err) {
+          setMessage('loginError', err.message, 'error');
+        }
+      });
+
+      document.getElementById('signupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMessage('signupError', '', 'error');
+        const form = new FormData(e.target);
+        try {
+          const res = await api('/api/signup', {
+            method: 'POST',
+            body: JSON.stringify({
+              username: form.get('username').toString().trim(),
+              password: form.get('password').toString()
+            })
+          });
+          state.user = res;
+          await initApp();
+        } catch (err) {
+          setMessage('signupError', err.message, 'error');
+        }
+      });
+
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try {
+          await api('/api/logout', { method: 'POST' });
+        } catch (_) {}
+        appView.classList.add('hidden');
+        authView.classList.remove('hidden');
+        state.user = null; state.invoices = []; state.currentInvoice = null;
+      });
+
+      profileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const payload = {
+          business_name: form.get('business_name') || '',
+          email: form.get('email') || '',
+          address: form.get('address') || '',
+          payment_info: form.get('payment_info') || '',
+          auto_reminders: form.get('auto_reminders') === 'true'
+        };
+        await api('/api/profile', { method: 'PUT', body: JSON.stringify(payload) });
+        await loadMe();
+      });
+
+      document.getElementById('regenTokenBtn').addEventListener('click', async () => {
+        const me = await api('/api/token/regenerate', { method: 'POST' });
+        mcpUrlEl.textContent = me.mcp_url || '';
+      });
+
+      document.getElementById('addItemBtn').addEventListener('click', () => {
+        itemsContainer.appendChild(renderItemRow());
+      });
+
+      document.getElementById('newInvoiceBtn').addEventListener('click', () => {
+        state.currentInvoice = null;
+        fillInvoiceForm(null);
+        renderInvoices();
+      });
+
+      invoiceForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const payload = {
+          client_name: form.get('client_name') || '',
+          client_email: form.get('client_email') || '',
+          issue_date: form.get('issue_date') || '',
+          due_date: form.get('due_date') || '',
+          currency: form.get('currency') || 'INR',
+          tax_rate: Number(form.get('tax_rate') || 0),
+          notes: form.get('notes') || '',
+          items: getInvoiceItems()
+        };
+        try {
+          if (state.currentInvoice) {
+            await api(`/api/invoices/${state.currentInvoice.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          } else {
+            await api('/api/invoices', { method: 'POST', body: JSON.stringify(payload) });
+          }
+          setMessage('invoiceMessage', 'Invoice saved', 'success');
+          await loadInvoices();
+        } catch (err) {
+          setMessage('invoiceMessage', err.message, 'error');
+        }
+      });
+
+      fillInvoiceForm(null);
+    </script>
+  </body>
+</html>
